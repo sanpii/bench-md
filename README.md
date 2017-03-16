@@ -1,4 +1,4 @@
-# bench-md
+# Benchmarkdown
 
 Automatically generate a benchmark graph from a markdown file.
 
@@ -39,13 +39,13 @@ Automatically generate a benchmark graph from a markdown file.
 ## Usage
 
 ```
-./src/bench-md bench.md
+./src/benchmarkdown bench.md
 ```
 
 You can specify a different output filename:
 
 ```
-./src/bench-md bench.md bench.png
+./src/benchmarkdown bench.md bench.png
 ```
 
 ## Structure
