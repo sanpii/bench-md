@@ -1,0 +1,175 @@
+#!/bin/bash
+
+set -euo pipefail
+
+function main()
+{
+    check_requirements
+    check_arguments $@
+
+    local filename=$1
+    local output=${2-${filename%.md}.png}
+    local csv=$(generate_csv "$filename")
+
+    draw_grap "$csv" "$output"
+}
+
+function check_requirements()
+{
+    set +e
+
+    type R &> /dev/null
+    if [[ $? -ne 0 ]]
+    then
+        echo "R is required to run this program."
+        exit 1
+    fi
+
+    set -e
+}
+
+function check_arguments()
+{
+    if [[ $# -lt 1 || $# -gt 2 ]]
+    then
+        echo "$0 input.md [output.png]"
+        exit 1
+    fi
+}
+
+function generate_csv()
+{
+    local filename=$1
+    local state='initial'
+    local code=
+
+    echo 'tool,step,mean,sd'
+
+    while read -r line
+    do
+        case "$line" in
+            "")
+            ;;
+            '# '*)
+                title=${line/\# }
+            ;;
+            '## '*)
+                tool=${line/\#\# }
+            ;;
+            '### '*)
+                step=${line/\#\#\# }
+            ;;
+            '```')
+                case "$state" in
+                    'initial')
+                        state='incode'
+                    ;;
+                    'incode')
+                        local duration=$(benchmark "$code")
+                        local mean=$(mean "$duration")
+                        local sd=$(sd "$duration" "$mean")
+
+                        echo "$tool,$step,$mean,$sd"
+
+                        code=
+                        state='initial'
+                    ;;
+                    *)
+                        echo "Invalid state '$state'"
+                    ;;
+                esac
+            ;;
+            *)
+                if [[ "$state" == 'incode' ]]
+                then
+                    code="$code$line;"
+                fi
+            ;;
+        esac
+    done <$filename
+}
+
+function benchmark()
+{
+    local code=$1
+    local count=${2-10}
+
+    for i in $(seq 1 $count)
+    do
+        echo -n "$(run "$code") "
+    done
+}
+
+function run()
+{
+    local code=$1
+
+    local start=$(date +%s)
+    eval "$code" >/dev/null
+    local end=$(date +%s)
+
+    echo $((end - start))
+}
+
+function mean()
+{
+    local durations=$1
+
+    echo "$duration" | awk '{
+        for (i = 1;i <= NF; i++) {
+            sum += $i
+        };
+        print sum / NF
+    }'
+}
+
+function sd()
+{
+    local durations=$1
+    local mean=${2-$(mean "$durations")}
+
+    echo "$duration" | awk -vM=5 "{
+        for (i = 1; i <= NF; i++) {
+            sum += (\$i-$mean) * (\$i-$mean)
+        };
+        print sqrt(sum / NF)
+    }"
+}
+
+function draw_grap()
+{
+    local csv=$1
+    local output=$2
+    readonly R_SCRIPT='
+error.bar <- function (x, y, upper, lower=upper, length=0.1, ...) {
+    if (length(x) != length(y)
+       | length(y) !=length(lower)
+       | length(lower) != length(upper)
+    ) {
+        stop("vectors must be same length")
+    }
+
+    arrows(x, y + upper, x, y - lower, angle = 90, code = 3, length = length, ...)
+}
+
+args <- commandArgs(trailingOnly = TRUE)
+output <- args[1]
+png(output)
+
+csv <- textConnection("'$csv'")
+bench <- read.csv(csv, header=TRUE, sep=",")
+
+tools <- unique(bench$tool)
+steps <- unique(bench$step)
+mean <- array(bench$mean, dim=c(length(tools), length(steps)), dimnames=list(tools, steps))
+sd <- array(bench$sd, dim=c(length(tools), length(steps)), dimnames=list(tools, steps))
+
+graph <- barplot(mean, legend=tools, beside = TRUE, ylab="Duration (s)",
+                 ylim=c(0, max(mean) + max(sd)), main = "Benchmark Title")
+error.bar(graph, mean, sd)'
+
+
+    echo "$R_SCRIPT" | R --no-save --slave --args "$output"
+}
+
+main $@
