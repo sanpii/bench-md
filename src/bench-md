@@ -118,9 +118,9 @@ function run()
 {
     local code=$1
 
-    local start=$(date +%s)
+    local start=$(date +%s%N)
     eval "$code" >/dev/null
-    local end=$(date +%s)
+    local end=$(date +%s%N)
 
     echo $((end - start))
 }
@@ -180,7 +180,7 @@ steps <- unique(bench$step)
 mean <- array(bench$mean, dim=c(length(tools), length(steps)), dimnames=list(tools, steps))
 sd <- array(bench$sd, dim=c(length(tools), length(steps)), dimnames=list(tools, steps))
 
-graph <- barplot(mean, legend=tools, beside = TRUE, ylab="Duration (s)",
+graph <- barplot(mean, legend=tools, beside = TRUE, ylab="Duration (ns)",
     ylim=c(0, max(mean) + max(sd)), main = title, col = rainbow(length(tools)))
 error.bar(graph, mean, sd)'
 
