@@ -44,6 +44,7 @@ function generate()
     local code=
     local i=1
     local csv="tool,step,mean,sd\n"
+    local count=10
 
     while read -r line
     do
@@ -59,13 +60,20 @@ function generate()
             '### '*)
                 step=${line/\#\#\# }
             ;;
-            '```')
+            '```'*)
                 case "$state" in
                     'initial')
+                        if [[ "$line" =~ \`\`\`\{([0-9]+)\} ]]
+                        then
+                            count="${BASH_REMATCH[1]}"
+                        else
+                            count=10
+                        fi
+
                         state='incode'
                     ;;
                     'incode')
-                        local duration=$(benchmark "$code")
+                        local duration=$(benchmark "$code" "$count")
                         local mean=$(mean "$duration")
                         local sd=$(sd "$duration" "$mean")
 
@@ -98,7 +106,7 @@ function generate()
 function benchmark()
 {
     local code=$1
-    local count=${2-10}
+    local count=$2
 
     for i in $(seq 1 $count)
     do

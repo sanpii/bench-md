@@ -32,7 +32,7 @@ Automatically generate a benchmark graph from a markdown file.
 
     ### Search
 
-    ```
+    ```{1}
     sleep 4
     ```
 
@@ -58,3 +58,11 @@ standar deviation is plotted (the sd is not displayed in this example, sleep is
 too accurate).
 
 You can generate an intermediate graphic by adding a line `---`.
+
+You can specify the number of repetitions:
+
+    ```{1}
+    sleep 4
+    ```
+
+This code will be executed only once.
