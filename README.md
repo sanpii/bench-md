@@ -20,6 +20,8 @@ Automatically generate a benchmark graph from a markdown file.
     sleep 2
     ```
 
+    ---
+
     ## Tool 2
 
     ### Import
@@ -54,3 +56,5 @@ serie and, finally, the third heading level is a group of bar.
 Then each code block is executed ten times. The mean of execution time and the
 standar deviation is plotted (the sd is not displayed in this example, sleep is
 too accurate).
+
+You can generate an intermediate graphic by adding a line `---`.
