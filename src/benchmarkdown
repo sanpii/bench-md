@@ -206,8 +206,8 @@ bench <- read.csv(csv, header=TRUE, sep=",")
 
 tools <- unique(bench$tool)
 steps <- unique(bench$step)
-mean <- array(bench$mean, dim=c(length(tools), length(steps)), dimnames=list(tools, steps))
-sd <- array(bench$sd, dim=c(length(tools), length(steps)), dimnames=list(tools, steps))
+mean <- t(array(bench$mean, dim=c(length(steps), length(tools)), dimnames=list(steps, tools)))
+sd <- t(array(bench$sd, dim=c(length(steps), length(tools)), dimnames=list(steps, tools)))
 
 graph <- barplot(mean, legend=tools, beside = TRUE, ylab="Duration (ns)",
     ylim=c(0, max(mean) + max(sd)), main = title, col = rainbow(length(tools)))
