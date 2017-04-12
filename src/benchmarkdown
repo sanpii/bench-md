@@ -7,10 +7,24 @@ function main()
     check_requirements
     check_arguments $@
 
+    local save_data=false
+
+    if [[ $1 == '--save-data' ]]
+    then
+        local save_data=true
+        shift
+    fi
+
     local filename=$1
     local output=${2-${filename%.md}.png}
+    local data=${filename%.md}.csv
 
-    generate "$filename" "$output"
+    if [[ ! "$save_data" ]]
+    then
+        data="/dev/null"
+    fi
+
+    generate "$filename" "$output" "$data"
 }
 
 function check_requirements()
@@ -29,9 +43,9 @@ function check_requirements()
 
 function check_arguments()
 {
-    if [[ $# -lt 1 || $# -gt 2 ]]
+    if [[ $# -lt 1 || $# -gt 3 ]]
     then
-        echo "$0 input.md [output.png]"
+        echo "$0 [--save-data] input.md [output.png]"
         exit 1
     fi
 }
@@ -40,6 +54,7 @@ function generate()
 {
     local filename=$1
     local output=$2
+    local data=$3
     local state='initial'
     local code=
     local i=1
@@ -90,6 +105,7 @@ function generate()
             ;;
             '---')
                 draw_graph "$csv" "${output%.png$}-$i.png" "$title"
+                write_data "$csv" "${data%.csv$}-$i.csv"
                 i=$(( $i + 1))
             ;;
             *)
@@ -102,6 +118,15 @@ function generate()
     done <$filename
 
     draw_graph "$csv" "$output" "$title"
+    write_data "$csv" "$data"
+}
+
+function write_data()
+{
+    local csv=$1
+    local filename=$2
+
+    printf $"$csv" > "$filename"
 }
 
 function benchmark()
