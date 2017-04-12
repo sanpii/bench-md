@@ -213,7 +213,7 @@ graph <- barplot(mean, legend=tools, beside = TRUE, ylab="Duration (ns)",
     ylim=c(0, max(mean) + max(sd)), main = title, col = rainbow(length(tools)))
 error.bar(graph, mean, sd)'
 
-    echo "$r_script" | R --no-save --slave --args "$output" "$title"
+    echo "$r_script" | R --no-save --slave --args "$output" "$title" 2> /dev/null
 }
 
 main $@
