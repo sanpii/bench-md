@@ -56,6 +56,7 @@ function generate()
             ;;
             '## '*)
                 tool=${line/\#\# }
+                (>&2 echo "$tool")
             ;;
             '### '*)
                 step=${line/\#\#\# }
@@ -73,7 +74,7 @@ function generate()
                         state='incode'
                     ;;
                     'incode')
-                        local duration=$(benchmark "$code" "$count")
+                        local duration=$(benchmark "$step" "$code" "$count")
                         local mean=$(mean "$duration")
                         local sd=$(sd "$duration" "$mean")
 
@@ -105,13 +106,16 @@ function generate()
 
 function benchmark()
 {
-    local code=$1
-    local count=$2
+    local step=$1
+    local code=$2
+    local count=$3
 
     for i in $(seq 1 $count)
     do
+        (>&2 echo -n $'\r'"  * $step: $i/$count")
         echo -n "$(run "$code") "
     done
+    (>&2 echo '')
 }
 
 function run()
