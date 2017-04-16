@@ -8,6 +8,10 @@ Automatically generate a benchmark graph from a markdown file.
 
     ## Tool 1
 
+    ```
+    service tool1 start
+    ```
+
     ### Import
 
     ```
@@ -23,6 +27,10 @@ Automatically generate a benchmark graph from a markdown file.
     ---
 
     ## Tool 2
+
+    ```
+    service tool2 start
+    ```
 
     ### Import
 
