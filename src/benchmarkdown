@@ -21,7 +21,7 @@ function main()
 
     if [[ ! "$save_data" ]]
     then
-        data="/dev/null"
+        data="$(mktemp)"
     fi
 
     generate "$filename" "$output" "$data"
@@ -29,12 +29,22 @@ function main()
 
 function check_requirements()
 {
+    for requirement in R hyperfine
+    do
+        check_requirement "$requirement"
+    done
+}
+
+function check_requirement()
+{
+    local requirement=$1
+
     set +e
 
-    type R &> /dev/null
+    type "$requirement" &> /dev/null
     if [[ $? -ne 0 ]]
     then
-        echo "R is required to run this program."
+        echo "$requirement is required to run this program."
         exit 1
     fi
 
@@ -58,7 +68,7 @@ function generate()
     local state='initial'
     local code=
     local i=1
-    local csv="tool,step,mean,sd\n"
+    local csv="tool,step,command,mean,stddev,median,user,system,min,max\n"
     local count=10
 
     local title=''
@@ -80,6 +90,7 @@ function generate()
             ;;
             '### '*)
                 step=${line/\#\#\# }
+                (>&2 echo "  * $step")
             ;;
             '```'*)
                 case "$state" in
@@ -98,11 +109,8 @@ function generate()
                         then
                             eval "$code"
                         else
-                            local duration=$(benchmark "$step" "$code" "$count")
-                            local mean=$(mean "$duration")
-                            local sd=$(sd "$duration" "$mean")
-
-                            csv="$csv$tool,$step,$mean,$sd\n"
+                            local result=$(benchmark "$code" "$count")
+                            csv="$csv$tool,$step,$result\n"
                         fi
 
                         code=
@@ -114,8 +122,8 @@ function generate()
                 esac
             ;;
             '---')
-                draw_graph "$csv" "${output%.png}-$i.png" "$title"
                 write_data "$csv" "${data%.csv}-$i.csv"
+                draw_graph "${data%.csv}-$i.csv" "${output%.png}-$i.png" "$title"
                 i=$(( $i + 1))
             ;;
             *)
@@ -127,8 +135,8 @@ function generate()
         esac
     done <$filename
 
-    draw_graph "$csv" "$output" "$title"
     write_data "$csv" "$data"
+    draw_graph "$data" "$output" "$title"
 }
 
 function write_data()
@@ -141,52 +149,10 @@ function write_data()
 
 function benchmark()
 {
-    local step=$1
-    local code=$2
-    local count=$3
-
-    for i in $(seq 1 $count)
-    do
-        (>&2 echo -n $'\r'"  * $step: $i/$count")
-        echo -n "$(run "$code") "
-    done
-    (>&2 echo '')
-}
-
-function run()
-{
     local code=$1
+    local count=$2
 
-    local start=$(date +%s%N)
-    eval "$code" >/dev/null
-    local end=$(date +%s%N)
-
-    echo $((end - start))
-}
-
-function mean()
-{
-    local durations=$1
-
-    echo "$duration" | awk '{
-        for (i = 1;i <= NF; i++) {
-            sum += $i
-        };
-        print sum / NF
-    }'
-}
-
-function sd()
-{
-    local durations=$1
-    local mean=${2-$(mean "$durations")}
-
-    echo "$duration" | awk -vM=5 "{
-        for (i = 1; i <= NF; i++) {
-            sum += (\$i-$mean) * (\$i-$mean)
-        };
-        print sqrt(sum / NF)
-    }"
+    hyperfine --style none --export-csv /dev/stdout --min-runs "$count" "$code" | tail -1
 }
 
 function draw_graph()
@@ -211,17 +177,16 @@ output <- args[1]
 title <- args[2]
 png(output)
 
-csv <- textConnection("'"$csv"'")
-bench <- read.csv(csv, header=TRUE, sep=",")
+bench <- read.csv("'"$csv"'", header=TRUE, sep=",")
 
 tools <- unique(bench$tool)
 steps <- unique(bench$step)
 mean <- t(array(bench$mean, dim=c(length(steps), length(tools)), dimnames=list(steps, tools)))
-sd <- t(array(bench$sd, dim=c(length(steps), length(tools)), dimnames=list(steps, tools)))
+stddev <- t(array(bench$stddev, dim=c(length(steps), length(tools)), dimnames=list(steps, tools)))
 
-graph <- barplot(mean, legend=tools, beside = TRUE, ylab="Duration (ns)",
-    ylim=c(0, max(mean) + max(sd)), main = title, col = rainbow(length(tools)))
-error.bar(graph, mean, sd)'
+graph <- barplot(mean, legend=tools, beside = TRUE, ylab="Duration (s)",
+    ylim=c(0, max(mean) + max(stddev)), main = title, col = rainbow(length(tools)))
+error.bar(graph, mean, stddev)'
 
     echo "$r_script" | R --no-save --slave --args "$output" "$title" 2> /dev/null
 }

@@ -1,6 +1,7 @@
 # Benchmarkdown
 
-Automatically generate a benchmark graph from a markdown file.
+Automatically generate a benchmark graph from a markdown file using
+[hyperfine](https://github.com/sharkdp/hyperfine/).
 
 ![Benchmark graphic](bench.png)
 
